@@ -1,0 +1,40 @@
+<div data-role="page" id="register">
+
+	<div data-role="header">
+		<h1>Register for VoteMeetEat.Com</h1>
+	</div>
+
+	<div data-role="content">
+		<div id="error"></div>
+		<div> Your phone number =${phoneNumber}=</div>
+		<form id="registrationForm" action="register.html" method="post" class="ui-body ui-body-a ui-corner-all">
+			<fieldset>
+				<div data-role="fieldcontain">
+					<label for="name">Name</label>
+					<input id="name" type="text" name="name" />					
+					<input id="phoneNumber" type="hidden" name="phoneNumber" value="${phoneNumber}"/>
+					<label for="latitude">Lat:</label>
+					<input id="latitude" type="text" name="latitude" size="10"/>
+					<label for="longitude">Lon</label>
+					<input id="longitude" type="text" name="longitude"  size="10"/>
+				</div>					
+				<button type="submit" data-theme="b" name="submit" value="submit-value">Register</button>
+			</fieldset>
+		</form>
+	</div>
+</div>
+
+
+<div data-role="page" id="thankyouforregistering">
+
+	<div data-role="header">
+		<h1>VoteMeetEat.Com</h1>
+	</div>
+
+	<div data-role="content">
+		<span>Thank you for registering</span>
+	</div>
+
+
+</div>
+
