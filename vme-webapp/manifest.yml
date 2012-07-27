@@ -1,0 +1,16 @@
+--- 
+applications: 
+  .: 
+    name: vme-webapp
+    framework: 
+      name: node
+      info: 
+        mem: 64M
+        description: Node.js Application
+        exec: 
+    url: votemeeteat.cloudfoundry.com
+    mem: 64M
+    instances: 1
+    services: 
+      votemeeteat-rabbitmq: 
+        type: rabbitmq

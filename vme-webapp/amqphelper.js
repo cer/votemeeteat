@@ -11,6 +11,5 @@ exports.initializeAmqp = function () {
   }
   var con = amqp.createConnection(connectionParams, {}, function () { console.log("Ready callback invoked");});
   con.on('error', function() { console.log("AMQP connection error")});
-  con.on('close', function() { console.log("AMQP connection closed")});
   return con;
 }
