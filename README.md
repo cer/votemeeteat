@@ -7,4 +7,5 @@ It uses a number of cloud services including http://www.twilio.com to organize a
 The application is comprised of the following services
 * registration-sms - handles registration SMS messages from Twilio.com
 * registration-webapp - implements user registration
+* vme-webapp - front end application for votemeeteat
 
