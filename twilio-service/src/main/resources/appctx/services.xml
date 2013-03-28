@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+	<aop:aspectj-autoproxy />
+
+	<context:component-scan base-package="net.chrisrichardson.vme.twilio" />
+	
+	<bean id="restTemplate" class="org.springframework.web.client.RestTemplate">
+		<property name="requestFactory" ref="httpClientRequestFactory" />
+	</bean>
+
+	<bean id="httpClientRequestFactory"
+		class="org.springframework.http.client.CommonsClientHttpRequestFactory">
+	</bean>
+
+	<beans profile="default">
+		<bean
+			class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+			<property name="locations">
+				<list>
+					<value>file:${user.home}/.twilio</value>
+					<value>classpath*:/config/default/*.properties</value>
+				</list>
+			</property>
+			<property name="ignoreResourceNotFound" value="true"/>
+		</bean>	
+	</beans>
+
+	<!-- FIXME Look at PropertySources... -->
+	
+	<beans profile="cloud">
+		<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+			<property name="ignoreUnresolvablePlaceholders" value="false"/> 
+			<property name="locations" value="classpath:config/mysql/*.properties"/>
+			<property name="properties">
+				<value>
+					server.base.url=
+					twilio.account.sid=#{systemEnvironment['twilio_account_sid']}
+					twilio.auth.token=#{systemEnvironment['twilio_auth_token']}
+					twilio.phone.number=#{systemEnvironment['twilio_phone_number']}
+					twilio.url=#{systemEnvironment['twilio_url']}
+				</value>
+			</property>
+		</bean>	
+	</beans>
+
+
+</beans>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:amqp="http://www.springframework.org/schema/integration/amqp"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xmlns:cloud="http://schema.cloudfoundry.org/spring"
+       xsi:schemaLocation="http://schema.cloudfoundry.org/spring http://schema.cloudfoundry.org/spring/cloudfoundry-spring-0.8.xsd
+		http://www.springframework.org/schema/integration/amqp http://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit-1.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+
+	<amqp:inbound-channel-adapter 
+		connection-factory="rabbitConnectionFactory" 
+		queue-names="crudUsers"
+		channel="inboundJsonEventsChannel"
+		error-channel="errorLogger"
+		/>
+
+	<int:logging-channel-adapter id="errorLogger" log-full-message="true" level="DEBUG" /> 
+
+	<int:channel id="inboundJsonEventsChannel"/>
+	
+	<int:json-to-object-transformer 
+		input-channel="inboundJsonEventsChannel" 
+		type="net.chrisrichardson.vme.usermanagement.messages.AddOrUpdateUserRequest"
+		output-channel="inboundEventsChannel"/>
+	
+	<int:channel id="inboundEventsChannel"/>
+	
+	<int:service-activator 
+		input-channel="inboundEventsChannel"
+		ref="mongoFriendService"
+		method="addOrUpdate"/>
+		
+	<!--  -->
+
+	<amqp:inbound-gateway
+		connection-factory="rabbitConnectionFactory" 
+		queue-names="nearbyFriendsRequestQueue"
+		request-channel="nearbyFriendsRequestJson"
+		
+		/>
+
+	<int:channel id="nearbyFriendsRequestJson"/>
+	
+	<int:chain id="nearbyFriendsRequest" input-channel="nearbyFriendsRequestJson" >
+		<int:json-to-object-transformer 
+			type="net.chrisrichardson.vme.common.messages.NearbyFriendsRequest" />
+		<int:service-activator 
+			ref="mongoFriendService"
+			method="findNearbyFriends"
+			/>
+		<int:object-to-json-transformer/>
+	</int:chain>
+
+	<rabbit:direct-exchange name="nearbyFriendsRequestExchange" durable="true">
+		<rabbit:bindings>
+			<rabbit:binding queue="nearbyFriendsRequestQueue" key="nearbyFriendsRequest"/>
+		</rabbit:bindings>
+	</rabbit:direct-exchange>
+	
+	<rabbit:queue id="nearbyFriendsRequestQueue" name="nearbyFriendsRequestQueue" durable="true"/>
+	<!--  -->
+	<rabbit:direct-exchange name="crudUsers" durable="true">
+		<rabbit:bindings>
+			<rabbit:binding queue="crudUsers" key="crudUsers"/>
+		</rabbit:bindings>
+	</rabbit:direct-exchange>
+
+	<rabbit:queue name="crudUsers" durable="true"/>
+
+	<rabbit:admin connection-factory="rabbitConnectionFactory"/>
+
+	<rabbit:template id="rabbitTemplate" connection-factory="rabbitConnectionFactory"/>
+
+	<beans profile="default">
+		<rabbit:connection-factory id="rabbitConnectionFactory" host="localhost"/>
+	</beans>
+
+	<beans profile="cloud">
+		<cloud:rabbit-connection-factory id="rabbitConnectionFactory"/>
+	</beans>
+
+</beans>

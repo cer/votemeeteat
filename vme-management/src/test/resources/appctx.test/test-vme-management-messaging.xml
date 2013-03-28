@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:amqp="http://www.springframework.org/schema/integration/amqp"
+       xsi:schemaLocation="http://www.springframework.org/schema/integration/amqp http://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+
+    <amqp:inbound-gateway
+            connection-factory="rabbitConnectionFactory"
+            queue-names="nearbyFriendsRequestQueue"
+            request-channel="stub-nearbyFriendsRequestJson"
+
+            />
+
+    <int:channel id="stub-nearbyFriendsRequestJson"/>
+
+    <int:chain id="stub-nearbyFriendsRequest" input-channel="stub-nearbyFriendsRequestJson" >
+        <int:json-to-object-transformer
+                type="net.chrisrichardson.vme.common.messages.NearbyFriendsRequest" />
+        <int:service-activator
+                ref="friendServiceStub"
+                method="findNearbyFriends"
+                />
+        <int:object-to-json-transformer/>
+    </int:chain>
+
+
+    <amqp:inbound-channel-adapter
+            channel="stub-inboundJsonEventsChannel"
+            connection-factory="rabbitConnectionFactory"
+            queue-names="createSurveyRequestQueue"/>
+
+    <int:channel id="stub-inboundJsonEventsChannel"/>
+
+    <int:json-to-object-transformer
+            input-channel="stub-inboundJsonEventsChannel"
+            type="net.chrisrichardson.vme.common.messages.CreateSurveyRequest"
+            output-channel="stub-inboundEventsChannel"/>
+
+    <int:channel id="stub-inboundEventsChannel"/>
+
+    <int:service-activator
+            input-channel="stub-inboundEventsChannel"
+            ref="surveyServiceStub"
+            method="createSurvey"/>
+
+</beans>

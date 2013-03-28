@@ -1,0 +1,20 @@
+--- 
+applications: 
+  target/appassembler/: 
+    name: vme-management
+    framework: 
+      name: standalone
+      info: 
+        mem: 64M
+        description: Standalone Application
+        exec: 
+    runtime: java
+    command: bin/user-management-main-program
+    url: 
+    mem: 512M
+    instances: 1
+    services: 
+      votemeeteat-mongo: 
+        type: mongodb
+      votemeeteat-rabbitmq: 
+        type: rabbitmq

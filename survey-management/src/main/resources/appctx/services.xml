@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:cloud="http://schema.cloudfoundry.org/spring"
+       xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+		http://schema.cloudfoundry.org/spring http://schema.cloudfoundry.org/spring/cloudfoundry-spring-0.8.xsd
+       http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+       http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.1.xsd">
+
+
+	<context:component-scan base-package="net.chrisrichardson.survey.backend" />
+	
+
+	<aop:config>
+		<aop:pointcut id="serviceCall"
+			expression="execution(public * net.chrisrichardson..*ServiceImpl.*(..))" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="serviceCall"
+			order="100" />
+	</aop:config>
+
+	<tx:advice id="txAdvice">
+		<tx:attributes>
+			<tx:method name="*" />
+		</tx:attributes>
+	</tx:advice>
+
+	<bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="jpaVendorAdapter">
+			<bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+				<property name="generateDdl" value="true" />
+				<!-- not reconfigured 
+				<property name="database" value="HSQL" />
+				 -->
+			</bean>
+		</property>
+		<property name="persistenceUnitName" value="jpa" />
+	</bean>
+	
+	<bean id="transactionTemplate" class="org.springframework.transaction.support.TransactionTemplate">
+		<property name="transactionManager" ref="transactionManager"/>
+	</bean>
+	
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+	</bean>
+
+	<bean id="restTemplate" class="org.springframework.web.client.RestTemplate">
+		<property name="requestFactory" ref="httpClientRequestFactory" />
+	</bean>
+
+
+	<bean id="httpClientRequestFactory"
+		class="org.springframework.http.client.CommonsClientHttpRequestFactory">
+	</bean>
+
+
+	<task:annotation-driven executor="myExecutor"
+		scheduler="myScheduler" />
+
+	<task:executor id="myExecutor" pool-size="5" />
+
+	<task:scheduler id="myScheduler" pool-size="10" />
+
+	<beans profile="default">
+		<bean
+			class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+			<property name="locations">
+				<list>
+					<value>file:${user.home}/.twilio</value>
+					<value>classpath*:/config/default/*.properties</value>
+				</list>
+			</property>
+			<property name="ignoreResourceNotFound" value="true"/>
+		</bean>	
+		<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+			<property name="driverClassName" value="${jdbc.driver.class}" />
+			<property name="url" value="${jdbc.url}" />
+			<property name="username" value="${jdbc.user}" />
+			<property name="password" value="${jdbc.password}" />
+		</bean>
+
+	</beans>
+
+	<!-- FIXME Look at PropertySources... -->
+	
+	<beans profile="cloud">
+		<cloud:data-source id="dataSource"/>
+		<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+			<property name="ignoreUnresolvablePlaceholders" value="false"/> 
+			<property name="locations" value="classpath:config/mysql/*.properties"/>
+			<property name="properties">
+				<value>
+					server.base.url=
+					twilio.account.sid=#{systemEnvironment['twilio_account_sid']}
+					twilio.auth.token=#{systemEnvironment['twilio_auth_token']}
+					twilio.phone.number=#{systemEnvironment['twilio_phone_number']}
+					twilio.url=#{systemEnvironment['twilio_url']}
+				</value>
+			</property>
+		</bean>	
+	</beans>
+
+
+</beans>

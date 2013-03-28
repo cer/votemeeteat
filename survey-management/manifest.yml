@@ -1,0 +1,18 @@
+--- 
+applications: 
+  target/: 
+    name: survey-votemeeteat
+    framework: 
+      name: spring
+      info: 
+        mem: 512M
+        description: Java SpringSource Spring Application
+        exec: 
+    url: ${name}.${target-base}
+    mem: 512M
+    instances: 1
+    services: 
+      votemeeteat-mysql: 
+        type: mysql
+      votemeeteat-rabbitmq: 
+        type: rabbitmq

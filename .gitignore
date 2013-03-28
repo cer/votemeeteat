@@ -1,2 +1,17 @@
 npm-debug.log
 node_modules
+target
+bin
+*.iml
+*.ipr
+*.iws
+.scala_dependencies
+build.log
+.classpath
+.project
+.settings
+.idea
+.cache
+.springBeans
+node_modules
+genjs

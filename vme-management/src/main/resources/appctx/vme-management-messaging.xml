@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:amqp="http://www.springframework.org/schema/integration/amqp"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xmlns:cloud="http://schema.cloudfoundry.org/spring"
+       xsi:schemaLocation="http://schema.cloudfoundry.org/spring http://schema.cloudfoundry.org/spring/cloudfoundry-spring-0.8.xsd
+		http://www.springframework.org/schema/integration/amqp http://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit-1.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+
+	<amqp:inbound-channel-adapter 
+		connection-factory="rabbitConnectionFactory" 
+		queue-names="scheduleVme"
+		channel="inboundJsonEventsChannel"
+		error-channel="errorLogger"
+		/>
+
+	<int:logging-channel-adapter id="errorLogger" log-full-message="true" level="DEBUG" /> 
+
+	<int:channel id="inboundJsonEventsChannel"/>
+	
+	<int:json-to-object-transformer 
+		input-channel="inboundJsonEventsChannel" 
+		type="net.chrisrichardson.vme.vmemanagement.messages.CreateVmeRequest"
+		output-channel="inboundEventsChannel"/>
+	
+	<int:channel id="inboundEventsChannel"/>
+	
+	<int:service-activator 
+		input-channel="inboundEventsChannel"
+		ref="vmeManagementServiceImpl"
+		method="createVme"/>
+
+	<!--  calling out -->
+	
+    <int:channel id="nearbyFriendsRequest"/>
+
+	<int:gateway id="friendsServiceGateway"
+		default-request-channel="nearbyFriendsRequest"
+    	service-interface="net.chrisrichardson.vme.vmemanagement.externalservices.FriendService"
+    	default-request-timeout="50"
+    	default-reply-channel="nearbyFriendsResponse"
+    	async-executor="taskExecutor"
+    	/>
+    
+    <!-- FIXME - if this is badly configured no useful messages are logged -->
+	<bean id="taskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+	  <property name="corePoolSize" value="5" />
+	  <property name="maxPoolSize" value="10" />
+	  <property name="queueCapacity" value="25" />
+	</bean>
+    
+    <int:object-to-json-transformer input-channel="nearbyFriendsRequest" output-channel="nearbyFriendsRequestJson"/>
+    
+    <int:channel id="nearbyFriendsRequestJson"/>
+    
+    <amqp:outbound-gateway
+    	request-channel="nearbyFriendsRequestJson"
+    	amqp-template="rabbitTemplate"
+    	exchange-name="nearbyFriendsRequestExchange"
+    	routing-key="nearbyFriendsRequest"
+    	reply-channel="nearbyFriendsResponseJson"
+    	/>
+
+	<int:channel id="nearbyFriendsResponseJson"/>
+
+	<int:json-to-object-transformer 
+		input-channel="nearbyFriendsResponseJson"
+		type="net.chrisrichardson.vme.common.messages.FindNearbyFriendsResponse" 
+		output-channel="nearbyFriendsResponse"/> 
+
+	<int:channel id="nearbyFriendsResponse"/>
+
+	<rabbit:direct-exchange name="nearbyFriendsRequestExchange" durable="true">
+	</rabbit:direct-exchange>
+
+	<!-- -->
+	
+	<int:gateway id="surveyServiceGateway"
+		default-request-channel="createSurveyRequestChannel"
+    	service-interface="net.chrisrichardson.vme.vmemanagement.externalservices.SurveyService"
+    />  
+	
+	<int:channel id="createSurveyRequestChannel"/>	
+	
+	<int:object-to-json-transformer input-channel="createSurveyRequestChannel"  
+	output-channel="createSurveyRequestJson"/>
+	
+	<int:channel id="createSurveyRequestJson"/>
+	
+	<amqp:outbound-channel-adapter 
+		channel="createSurveyRequestJson" 
+		amqp-template="rabbitTemplate" 
+		routing-key="createSurveyRequest"
+		exchange-name="createSurveyRequest"
+		/>
+	
+	<!--  -->
+	
+	<rabbit:direct-exchange name="createSurveyRequest" durable="true">
+	</rabbit:direct-exchange>
+	
+	<rabbit:direct-exchange name="scheduleVme" durable="true">
+		<rabbit:bindings>
+			<rabbit:binding queue="scheduleVme" key="scheduleVme"/>
+		</rabbit:bindings>
+	</rabbit:direct-exchange>
+
+	<rabbit:queue name="scheduleVme" durable="true"/>
+
+	<rabbit:admin connection-factory="rabbitConnectionFactory"/>
+
+	<rabbit:template id="rabbitTemplate" connection-factory="rabbitConnectionFactory"/>
+
+	<beans profile="default">
+		<rabbit:connection-factory id="rabbitConnectionFactory" host="localhost"/>
+	</beans>
+
+	<beans profile="cloud">
+		<cloud:rabbit-connection-factory id="rabbitConnectionFactory"/>
+	</beans>
+
+</beans>

@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+	"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="net.chrisrichardson.survey.backend.domain"
+	default-access="field">
+
+	<class name="Survey">
+		<id name="id" column="survey_id">
+			<generator class="native" />
+		</id>
+		<property name="prompt" />
+		<property name="status" />
+
+		<set name="participants" cascade="all" inverse="true">
+			<key column="survey_id"/>
+			<one-to-many class="Participant" />
+		</set>
+
+		<list name="choices"  cascade="all">
+			<key column="survey_id"/>
+			<list-index />
+			<element type="string" column="choice_text"/>
+		</list>
+		
+		<property name="closeTime" type="org.joda.time.contrib.hibernate.PersistentDateTime"/>
+		
+		<query name="findSurveyByCallerId">
+			<!-- FIXME - this query is bogus -->
+			<![CDATA[
+				select s
+				from Survey s
+				  inner join s.participants as p
+				  where p.phoneNumber = ?
+				  order by s.closeTime desc
+			]]>
+		</query>
+		<query name="findExpiredSurveys">
+			<![CDATA[
+				from Survey
+				where (status = 1 and closeTime < ?) or (status = 3)
+			]]>
+		</query>
+		<query name="findParticipantsToNotify">
+			<![CDATA[
+				select p
+				from Participant p
+				  inner join fetch p.survey as s
+				  where s.status = 1 and p.state = 0
+			]]>
+		</query>
+	</class>
+	
+	<class name="Participant">
+		<id name="id" column="participant_id">
+			<generator class="native" />
+		</id>
+		<property name="name"/>
+		<property name="phoneNumber"/>
+		<property name="state"/>
+		<property name="response"/>
+		<many-to-one name="survey" column="survey_id" not-null="true"/>
+	</class>	
+
+</hibernate-mapping>
